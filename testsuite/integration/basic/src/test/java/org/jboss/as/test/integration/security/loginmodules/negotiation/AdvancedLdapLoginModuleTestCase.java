@@ -21,6 +21,7 @@
  */
 package org.jboss.as.test.integration.security.loginmodules.negotiation;
 
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUBSYSTEM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -40,6 +41,7 @@ import java.util.Map;
 import javax.naming.Context;
 import javax.security.auth.login.LoginException;
 
+import org.apache.avro.generic.GenericData;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -83,9 +85,12 @@ import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.as.arquillian.api.ServerSetup;
 import org.jboss.as.arquillian.api.ServerSetupTask;
 import org.jboss.as.arquillian.container.ManagementClient;
+import org.jboss.as.controller.PathAddress;
+import org.jboss.as.controller.operations.common.Util;
 import org.jboss.as.network.NetworkUtils;
 import org.jboss.as.test.integration.security.common.AbstractSecurityDomainsServerSetupTask;
 import org.jboss.as.test.integration.security.common.AbstractSystemPropertiesServerSetupTask;
+import org.jboss.as.test.integration.security.common.CoreUtils;
 import org.jboss.as.test.integration.security.common.KDCServerAnnotationProcessor;
 import org.jboss.as.test.integration.security.common.ManagedCreateLdapServer;
 import org.jboss.as.test.integration.security.common.ManagedCreateTransport;
@@ -97,6 +102,7 @@ import org.jboss.as.test.integration.security.common.servlets.PrincipalPrintingS
 import org.jboss.as.test.integration.security.common.servlets.RolePrintingServlet;
 import org.jboss.as.test.integration.security.common.servlets.SimpleSecuredServlet;
 import org.jboss.as.test.integration.security.common.servlets.SimpleServlet;
+import org.jboss.dmr.ModelNode;
 import org.jboss.logging.Logger;
 import org.jboss.security.SecurityConstants;
 import org.jboss.security.negotiation.AdvancedLdapLoginModule;
@@ -116,7 +122,8 @@ import org.junit.runner.RunWith;
 @ServerSetup({ Krb5ConfServerSetupTask.class, //
         AdvancedLdapLoginModuleTestCase.KerberosSystemPropertiesSetupTask.class, //
         AdvancedLdapLoginModuleTestCase.DirectoryServerSetupTask.class, //
-        AdvancedLdapLoginModuleTestCase.SecurityDomainsSetup.class })
+        AdvancedLdapLoginModuleTestCase.SecurityDomainsSetup.class,
+        AdvancedLdapLoginModuleTestCase.AuthenticationLoggingServerSetupTask.class })
 @RunAsClient
 public class AdvancedLdapLoginModuleTestCase {
     private static Logger LOGGER = Logger.getLogger(AdvancedLdapLoginModuleTestCase.class);
@@ -133,6 +140,7 @@ public class AdvancedLdapLoginModuleTestCase {
     private static final String DEP2 = "DEP2";
     private static final String DEP3 = "DEP3";
     private static final String DEP4 = "DEP4";
+    private static final String DEP5 = "DEP5";
 
     private static final String[] ROLE_NAMES = { "TheDuke", "Echo", "TheDuke2", "Echo2", "JBossAdmin", "jduke", "jduke2",
             "RG1", "RG2", "RG3", "R1", "R2", "R3", "R4", "R5", "Roles" };
@@ -197,6 +205,16 @@ public class AdvancedLdapLoginModuleTestCase {
     }
 
     /**
+     * Creates {@link WebArchive} for {@link #test5(URL)}.
+     *
+     * @return
+     */
+    @Deployment(name = DEP5, testable = false)
+    public static WebArchive deployment5() {
+        return createWar(SECURITY_DOMAIN_NAME_PREFIX + DEP5);
+    }
+
+    /**
      * Test case for Example 1.
      *
      * @throws Exception
@@ -242,6 +260,18 @@ public class AdvancedLdapLoginModuleTestCase {
         // recursion in AdvancedLdapLoginModule is enabled only if the roleAttributeIsDN module option is true. This is not
         // required in LdapExtLogiModule.
         testDeployment(webAppURL, "RG2", "R5");
+    }
+
+    /**
+     * JBEAP-4246
+     *
+     * @throws Exception
+     */
+    @Test
+    @OperateOnDeployment(DEP5)
+    public void test5(@ArquillianResource URL webAppURL) throws Exception {
+        // JBPAPP-10173 - ExtendedLdap LM would contain also "jduke"
+        testDeployment(webAppURL, "TheDuke", "Echo");
     }
 
     // Private methods -------------------------------------------------------
@@ -525,6 +555,9 @@ public class AdvancedLdapLoginModuleTestCase {
                             spnegoLoginModule,
                             new SecurityModule.Builder().name(AdvancedLdapLoginModule.class.getName())
                                     .options(getCommonOptions()) //
+//                                    .putOption(Context.PROVIDER_URL,
+//                                        "ldap://" + NetworkUtils.formatPossibleIpv6Address(Utils.getSecondaryTestAddress(managementClient, true))
+//                                            + ":" + LDAP_PORT + "/dc=jboss,dc=org")
                                     .putOption("baseCtxDN", "ou=Users,dc=jboss,dc=org") //
                                     .putOption("baseFilter", "(krb5PrincipalName={0})") //
                                     .putOption("rolesCtxDN", "ou=Roles,dc=jboss,dc=org") //
@@ -575,7 +608,22 @@ public class AdvancedLdapLoginModuleTestCase {
                                     .putOption("recurseRoles", TRUE) //
                                     .build()) //
                     .build();
-            return new SecurityDomain[] { hostDomain, sd1, sd2, sd3, sd4 };
+            final SecurityDomain sd5 = new SecurityDomain.Builder()
+                    .name(SECURITY_DOMAIN_NAME_PREFIX + DEP5)
+                    .loginModules(
+                            spnegoLoginModule,
+                            new SecurityModule.Builder().name("AdvancedLdap")
+                                    .options(getCommonOptions())
+                                    .putOption("baseCtxDN", "ou=Users,dc=jboss,dc=org") //
+                                    .putOption("baseFilter", "(krb5PrincipalName={0})") //
+                                    .putOption("rolesCtxDN", "") // empty roles context
+                                    .putOption("roleFilter", "(postalAddress={0})") //
+                                    .putOption("roleAttributeID", "description") //
+                                    .putOption("roleAttributeIsDN", TRUE) //
+                                    .putOption("roleNameAttributeID", "cn") //
+                                    .build()) //
+                    .build();
+            return new SecurityDomain[] { hostDomain, sd1, sd2, sd3, sd4, sd5 };
         }
 
         private Map<String, String> getCommonOptions() {
@@ -613,5 +661,41 @@ public class AdvancedLdapLoginModuleTestCase {
             return mapToSystemProperties(map);
         }
 
+    }
+
+    static class AuthenticationLoggingServerSetupTask implements ServerSetupTask {
+
+        private static final PathAddress PATH_LOGGING = PathAddress.pathAddress(SUBSYSTEM, "logging");
+
+        @Override
+        public void setup(ManagementClient managementClient, String containerId) throws Exception {
+            List<ModelNode> updates = new ArrayList<>();
+
+            ModelNode operation = Util.createAddOperation(PATH_LOGGING.append("logger", "org.jboss.security.auth"));
+            operation.get("level").set("DEBUG");
+            updates.add(operation);
+
+            operation = Util.createEmptyOperation("write-attribute", PATH_LOGGING.append("console-handler", "CONSOLE"));
+            operation.get("name").set("level");
+            operation.get("value").set("DEBUG");
+            updates.add(operation);
+
+            CoreUtils.applyUpdates(updates, managementClient.getControllerClient());
+        }
+
+        @Override
+        public void tearDown(ManagementClient managementClient, String containerId) throws Exception {
+            List<ModelNode> updates = new ArrayList<>();
+
+            ModelNode operation = Util.createRemoveOperation(PATH_LOGGING.append("logger", "org.jboss.security.auth"));
+            updates.add(operation);
+
+            operation = Util.createEmptyOperation("write-attribute", PATH_LOGGING.append("console-handler", "CONSOLE"));
+            operation.get("name").set("level");
+            operation.get("value").set("DEBUG");
+            updates.add(operation);
+
+            CoreUtils.applyUpdates(updates, managementClient.getControllerClient());
+        }
     }
 }
