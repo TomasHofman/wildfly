@@ -43,6 +43,8 @@ import org.jboss.as.naming.ServiceBasedNamingStore;
 import org.jboss.as.naming.deployment.ContextNames;
 import org.jboss.as.naming.service.BinderService;
 import org.jboss.as.server.CurrentServiceContainer;
+import org.jboss.as.server.deployment.AttachmentKey;
+import org.jboss.as.server.deployment.AttachmentList;
 import org.jboss.as.server.deployment.DeploymentPhaseContext;
 import org.jboss.as.server.deployment.DeploymentUnit;
 import org.jboss.as.server.deployment.DeploymentUnitProcessingException;
@@ -76,6 +78,9 @@ import static org.jboss.as.ee.logging.EeLogger.ROOT_LOGGER;
  */
 public class ModuleJndiBindingProcessor implements DeploymentUnitProcessor {
 
+    private static final AttachmentKey<AttachmentList<BindingConfiguration>> BINDING_CONFIGURATION_KEY =
+            AttachmentKey.createList(BindingConfiguration.class);
+
     public void deploy(final DeploymentPhaseContext phaseContext) throws DeploymentUnitProcessingException {
         final DeploymentUnit deploymentUnit = phaseContext.getDeploymentUnit();
         final EEApplicationClasses applicationClasses = deploymentUnit.getAttachment(Attachments.EE_APPLICATION_CLASSES_DESCRIPTION);
@@ -104,6 +109,7 @@ public class ModuleJndiBindingProcessor implements DeploymentUnitProcessor {
             final ContextNames.BindInfo bindInfo = ContextNames.bindInfoForEnvEntry(moduleConfiguration.getApplicationName(), moduleConfiguration.getModuleName(), null, false, binding.getName());
 
             deploymentDescriptorBindings.put(bindInfo.getBinderServiceName(), binding);
+            deploymentUnit.addToAttachmentList(BINDING_CONFIGURATION_KEY, binding);
             addJndiBinding(moduleConfiguration, binding, phaseContext, dependencies);
         }
 
@@ -122,8 +128,18 @@ public class ModuleJndiBindingProcessor implements DeploymentUnitProcessor {
 
                 final ContextNames.BindInfo bindInfo = ContextNames.bindInfoForEnvEntry(moduleConfiguration.getApplicationName(), moduleConfiguration.getModuleName(), null, false, binding.getName());
                 deploymentDescriptorBindings.put(bindInfo.getBinderServiceName(), binding);
+                deploymentUnit.addToAttachmentList(BINDING_CONFIGURATION_KEY, binding);
                 addJndiBinding(moduleConfiguration, binding, phaseContext, dependencies);
             }
+        }
+
+        DeploymentUnit parentUnit = deploymentUnit.getParent();
+        while (parentUnit != null) {
+            for (BindingConfiguration binding: parentUnit.getAttachmentList(BINDING_CONFIGURATION_KEY)) {
+                final ContextNames.BindInfo bindInfo = ContextNames.bindInfoForEnvEntry(moduleConfiguration.getApplicationName(), moduleConfiguration.getModuleName(), null, false, binding.getName());
+                deploymentDescriptorBindings.put(bindInfo.getBinderServiceName(), binding);
+            }
+            parentUnit = parentUnit.getParent();
         }
 
         //now add all class level bindings
