@@ -296,14 +296,14 @@
         <version.org.apache.activemq.artemis>2.8.1</version.org.apache.activemq.artemis>
         <version.org.apache.activemq.artemis.native>1.0.0</version.org.apache.activemq.artemis.native>
         <version.org.apache.avro>1.7.6</version.org.apache.avro>
-        <version.org.apache.cxf>3.3.2</version.org.apache.cxf>
+        <version.org.apache.cxf>3.3.3</version.org.apache.cxf>
         <version.org.apache.cxf.xjcplugins>3.3.0</version.org.apache.cxf.xjcplugins>
         <version.org.apache.ds>2.0.0-M24</version.org.apache.ds>
         <version.org.apache.httpcomponents.httpasyncclient>4.1.4</version.org.apache.httpcomponents.httpasyncclient>
         <version.org.apache.james.apache-mime4j>0.6</version.org.apache.james.apache-mime4j>
         <version.org.apache.jstl>1.2.6-RC1</version.org.apache.jstl>
         <version.org.apache.lucene>5.5.5</version.org.apache.lucene>
-        <version.org.apache.myfaces.core>2.3.1</version.org.apache.myfaces.core>
+        <version.org.apache.myfaces.core>2.3.4</version.org.apache.myfaces.core>
         <version.org.apache.neethi>3.1.1</version.org.apache.neethi>
         <version.org.apache.openjpa>2.4.2</version.org.apache.openjpa>
         <version.org.apache.qpid.proton>0.32.0</version.org.apache.qpid.proton>
@@ -392,7 +392,7 @@
         <version.org.jboss.ws.jaxws-undertow-httpspi>1.0.1.Final</version.org.jboss.ws.jaxws-undertow-httpspi>
         <version.org.jboss.ws.spi>3.2.3.Final</version.org.jboss.ws.spi>
         <version.org.jboss.xnio.netty.netty-xnio-transport>0.1.6.Final</version.org.jboss.xnio.netty.netty-xnio-transport>
-        <version.org.jgroups>4.1.1.Final</version.org.jgroups>
+        <version.org.jgroups>4.1.2.Final</version.org.jgroups>
         <version.org.jgroups.azure>1.2.1.Final</version.org.jgroups.azure>
         <version.org.jgroups.kubernetes>1.0.12.Final</version.org.jgroups.kubernetes>
         <version.org.jipijapa>1.0.1.Final</version.org.jipijapa>
