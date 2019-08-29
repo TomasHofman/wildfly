@@ -278,7 +278,7 @@
         <version.io.smallrye.smallrye-metrics>1.1.0</version.io.smallrye.smallrye-metrics>
         <version.io.smallrye.opentracing>1.1.1</version.io.smallrye.opentracing>
         <version.io.undertow.jastow>2.0.7.Final</version.io.undertow.jastow>
-        <version.io.undertow.js>1.0.2.Final</version.io.undertow.js>
+        <version.io.undertow.js>1.0.3.Final</version.io.undertow.js>
         <version.javax.activation>1.1.1</version.javax.activation>
         <version.javax.enterprise>2.0.SP1</version.javax.enterprise>
         <version.javax.json.bind.api>1.0</version.javax.json.bind.api>
